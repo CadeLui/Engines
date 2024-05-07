@@ -31,7 +31,7 @@ label exhaust_cfm(intake_cfm * 1.66)
 label cyl(4.0)
 label row(2.0)
 label cycle(2.0 * 360 * units.deg)
-label vee(60 * units.deg)
+label vee(45 * units.deg)
 label rot(2.0 * (360 / cyl) * units.deg)
 label rot90(90.0 * units.deg)
 label rot180(180.0 * units.deg)
@@ -54,6 +54,8 @@ label exhaust_duration(EVO + EVC + rot180)
 label ILC((-IVO + rot180 + IVC) / 2.0 + rot360)
 label ELC((rot180 - EVO + EVC + rot360) / 2.0)
 
+label ignition_advance(vee/3)
+
 public node eng_distributor{
     input wires;
     input timing_curve;
@@ -61,10 +63,10 @@ public node eng_distributor{
     input limiter_duration: 0.03;
     alias output __out:
         ignition_module(timing_curve: timing_curve, rev_limit: rev_limit, limiter_duration: limiter_duration)
-            .connect_wire(wires.wire1, 0.0 * units.deg)
-            .connect_wire(wires.wire2, rot180)
-            .connect_wire(wires.wire3, rot360)
-            .connect_wire(wires.wire4, rot360 + rot180);
+            .connect_wire(wires.wire1, 0.0 * units.deg - ignition_advance)
+            .connect_wire(wires.wire2, rot180 - ignition_advance)
+            .connect_wire(wires.wire3, rot360 - ignition_advance)
+            .connect_wire(wires.wire4, rot360 + rot180 - ignition_advance);
 }
 
 private node wires {
@@ -101,7 +103,7 @@ private node add_lobes {
     alias output __out: this;
 
     this.add_lobe(base + 0 * units.deg + shift)
-    this.add_lobe(base + 540 * units.deg + shift)
+    this.add_lobe(base + 180 * units.deg + shift)
 }
 
 public node camshaft_builder{
@@ -112,7 +114,7 @@ public node camshaft_builder{
    output exhaust_cam_1: _exhaust_cam_1;
 
    camshaft_parameters params(
-        advance: 0 * units.deg,
+        advance: 40 * units.deg,
         base_radius: 20.0 * units.mm
    ) 
 
@@ -125,7 +127,7 @@ public node camshaft_builder{
    _intake_cam_0.add_lobes(ILC)
    _exhaust_cam_0.add_lobes(ELC)
 
-    label second_cam_offset(rot180 + vee/1.5)
+    label second_cam_offset(vee + rot180 + rot90)
    _intake_cam_1.add_lobes(ILC, second_cam_offset)
    _exhaust_cam_1.add_lobes(ELC, second_cam_offset)
 }
@@ -322,13 +324,13 @@ public node eng {
             intake: intake,
             exhaust_system: exhaust0,
             primary_length: pl0,
-            ignition_wire: wires.wire4
+            ignition_wire: wires.wire2
         )
     b1
         .add_cylinder(
             piston: piston(piston_params),
             connecting_rod: connecting_rod(master_rod_params),
-            rod_journal: rj1,
+            rod_journal: rj3,
             intake: intake,
             exhaust_system: exhaust1,
             primary_length: pl0,
@@ -337,11 +339,11 @@ public node eng {
         .add_cylinder(
             piston: piston(piston_params),
             connecting_rod: connecting_rod(master_rod_params),
-            rod_journal: rj3,
+            rod_journal: rj1,
             intake: intake,
             exhaust_system: exhaust1,
             primary_length: pl0,
-            ignition_wire: wires.wire2
+            ignition_wire: wires.wire4
         )
     
     engine
